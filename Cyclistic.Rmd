@@ -1,0 +1,301 @@
+---
+title: "Case Study #01 : Cyclistic Bike-Share"
+author: "Created By : Harsh Choudhary"
+date: "Last Updated : 21/02/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+chooseCRANmirror(graphics=FALSE, ind=1)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+
+# **Prepare Phase**
+
+### *Installing Packages and libraries*
+```{r}
+  install.packages("tidyverse")
+  install.packages("lubridate")
+  library(tidyverse)
+  library(lubridate)
+  library(readr)
+
+```
+
+### *Importing all Data Files from December-2020 to November-2021*
+```{r}
+td01 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202012-divvy-tripdata.csv")
+td02 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202101-divvy-tripdata.csv")
+td03 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202102-divvy-tripdata.csv")
+td04 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202103-divvy-tripdata.csv")
+td05 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202104-divvy-tripdata.csv")
+td06 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202105-divvy-tripdata.csv")
+td07 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202106-divvy-tripdata.csv")
+td08 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202107-divvy-tripdata.csv")
+td09 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202108-divvy-tripdata.csv")
+td10 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202109-divvy-tripdata.csv")
+td11 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202110-divvy-tripdata.csv")
+td12 <- read_csv("C:/Users/Harsh/Desktop/Coursera/Google Data Analyst Certification/Case Study 1 - 1/202111-divvy-tripdata.csv")
+
+
+```
+
+### *Merging all dataset into single dataset.*
+```{r}
+complete_year <- rbind(td01,td02,td03,td04,td05,td06,td07,td08,td09,td10,td11,td12)
+
+```
+
+### *Inspecting data of Combined dataset.*
+```{r}
+View(complete_year)
+
+head(complete_year)
+
+str(complete_year)
+
+colnames(complete_year)
+
+```
+
+
+
+
+
+
+
+# **Process Phase**
+
+### *Adding new column, ride_length to calculate total time travelled*
+```{r}
+complete_year <- mutate(complete_year, ride_length = ended_at - started_at)
+complete_year$ride_length <- as.numeric(as.character(complete_year$ride_length))
+
+```
+
+### *Removing the dataset which is not in use*
+```{r}
+rm(td01,td02,td03,td04,td05,td06,td07,td08,td09,td10,td11,td12)
+
+```
+
+### *Splitting/Extracting the date, month, day and year of each ride*
+```{r}
+complete_year$date <- as.Date(complete_year$started_at)
+complete_year$month <- format(as.Date(complete_year$date), "%m")
+complete_year$day <- format(as.Date(complete_year$date), "%d")
+complete_year$year <- format(as.Date(complete_year$date), "%Y")
+complete_year$day_of_week <- format(as.Date(complete_year$date), "%A")
+
+```
+
+### *Calculate total distance between the start and end point using euclidean method*
+```{r}
+complete_year$x <- (complete_year$end_lat-complete_year$start_lat)**2
+complete_year$y <- (complete_year$end_lng-complete_year$start_lng)**2
+complete_year$total_distance <- (complete_year$x + complete_year$y)**0.5
+
+```
+
+### *Inspecting the dataset*
+```{r}
+View(complete_year)
+
+colnames(complete_year)
+
+summary(complete_year)
+
+```
+
+### *Sorting dataset in an ascending order by date.*
+```{r}
+complete_year %>% arrange(started_at)
+
+```
+
+### *Droping all rows with any NULL values.*
+```{r}
+cleaned_df <- complete_year %>% drop_na()
+
+```
+
+### *Removing Duplicate data.*
+```{r}
+unique_df <- distinct(cleaned_df)
+
+```
+
+### *Inspecting the dataset*
+```{r}
+View(unique_df)
+
+colnames(unique_df)
+
+summary(unique_df)
+
+```
+
+
+
+
+
+
+
+# **Analyse Phase**
+
+### *Calculating the mean and max ride-duration in minutes for both type of riders.*
+```{r}
+mean_and_max <- unique_df %>% 
+  group_by(member_casual) %>% 
+  summarise(Mean_ride_len_inMinutes=(mean(ride_length)/60), Max_ride_len_inMinutes=(max(ride_length))/60)
+View(mean_and_max)
+
+```
+
+
+### *Calculating the total rides for both type of riders by weekday by counting ride_id.*
+```{r}
+Number_of_rides <- unique_df %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>%
+  group_by(member_casual, weekday) %>%
+  summarise(total_rides = n(), average_duration_in_minutes = abs((mean(ride_length))/60)) %>%
+  arrange(member_casual, weekday)
+View(Number_of_rides)
+
+```
+
+
+### **Findings $01 : ***Maximum number of rides for Casual was in Saturday and for Member was in Wednesday*
+```{r}
+Number_of_rides %>% summarise(max_rides = max(total_rides)) 
+
+```
+
+### **Findings $02 : ***Minimum number of rides for Casual was in Tuesday and for Member was in Sunday*
+```{r}
+Number_of_rides %>% summarise(min_rides = min(total_rides))
+
+```
+
+### *Graph for Weekday vs Total Rides*
+```{r}
+ggplot(data=Number_of_rides) +
+  geom_col(mapping= aes(x = weekday, y = total_rides, fill = member_casual), position = "dodge") +
+  labs(title = "Weekly rides of the Members and Causal rider", 
+       subtitle = "Findings : Casuals rider rides more on weekends whereas Annual Members more on weekdays.")
+
+```
+**Findings $03 : ***Casuals rider rides more on weekends whereas Annual Members more on weekdays.*
+
+### *Graph for Weekday vs Average Ride Duration*
+```{r}
+ggplot(data=Number_of_rides) +
+  geom_col(mapping= aes(x = weekday, y = average_duration_in_minutes, fill = member_casual), position = "dodge") +
+  labs(title = "Weekly ride duration for member and casual", 
+       subtitle = "Findings : Casual Riders uses bikes for longer on each trip than Annual Member Rider.")
+
+```
+**Findings $04 : ***On average, Casual Riders rides atleast 2.5 times longer than the Annual Member Rider.*
+
+
+### *Extracting Important features of large dataset into new dataset*
+```{r}
+final_df <- unique_df %>% 
+  select(ride_id, rideable_type, ride_length, member_casual, total_distance, day_of_week, month, year)
+summary(final_df)
+View(final_df)
+
+```
+
+
+
+
+
+
+
+# **Share Phase**
+
+### *Calculating total rides for both type of riders for each month by counting ride_id.*
+```{r}
+Number_of_rides_by_month <- final_df %>% 
+  group_by(member_casual, month) %>%
+  summarise(total_rides = n()) %>%
+  arrange(member_casual, month)
+View(Number_of_rides_by_month)
+
+```
+
+
+
+### *Graph for both member's total rides in each month.*
+```{r}
+ggplot(data=Number_of_rides_by_month) +
+  geom_col(mapping= aes(x = month, y = total_rides, fill = member_casual), position = "dodge") +
+  #facet_wrap(~member_casual) +
+  labs(title ="Monthly Number of Riders", subtitle = "Findings : Bike-Share High time is on Summer", caption = "Note : January,2021 - 01 and December,2020 - 12")
+
+```
+**Findings $05 : ***Both the riders are increasing during the month of May-September i.e during Summer and decreases during Winter.*
+
+
+
+
+### *Bikes not returned in 24 hours.*
+```{r}
+bike_not_return <- final_df %>% 
+  group_by(member_casual, day_of_week) %>%
+  filter(ride_length>86400)%>%
+  summarise(total_rides = n())
+View(bike_not_return)
+```
+
+
+### *Graph for Bikes Not Returned in a Day.*
+```{r}
+ggplot(data=bike_not_return) +
+  geom_col(mapping= aes(x = day_of_week, y = total_rides, fill = member_casual), position = "dodge") +
+  labs(title ="Bike not return in 24 hours", 
+       subtitle = "Findings : Risk in renting the bikes to Casual Members.")
+
+```
+**Findings $06 : ***Annual Member tend to take far better care of our bikes are much more careful about returning the bike to a docking station in time than a typical casual rider, even though they use them far more often.*
+
+
+
+#### *Checking the total rides for Annual Member for docked_bike.*
+```{r}
+total_docked_bike <- cleaned_df %>% 
+  filter(rideable_type=="docked_bike" , member_casual=="member") %>% 
+  summarise(total_rides = n())
+View(total_docked_bike)
+
+```
+
+
+### *Checking the rider preference for bikes.*
+```{r}
+preferenced_bike <- final_df %>% 
+  group_by(member_casual, rideable_type) %>%
+  summarise(total_rides = n()) %>%
+  arrange(member_casual, rideable_type)
+View(preferenced_bike)
+```
+
+
+### *Graph for both Member's preference bike*
+```{r}
+ggplot(data=preferenced_bike) +
+  geom_col(mapping= aes(x = rideable_type, y = total_rides, fill = member_casual), position = "dodge")+
+  labs(title ="Prefered Bikes for Riders", 
+       subtitle = "Findings : Classic Bike is the Most Used Bike.")
+
+```
+**Findings $07 : ***Classic bike are the most popular bike compare to other 2 bikes for both the riders, the preference for bikes are classic, electric and then docked bike.*
+
+
+
+
